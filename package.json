@@ -28,7 +28,7 @@
     {
       "name": "apiKey",
       "title": "API Key",
-      "description": "Your Greptile API key.",
+      "description": "Greptile API key",
       "type": "password",
       "required": true
     }
