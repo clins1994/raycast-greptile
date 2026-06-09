@@ -1,6 +1,15 @@
-import { Action, ActionPanel, Detail, Icon } from "@raycast/api";
+import {
+  Action,
+  ActionPanel,
+  Detail,
+  Icon,
+  Toast,
+  showToast,
+} from "@raycast/api";
+import { useEffect } from "react";
 
 import { useCodeReview } from "../hooks/useGreptile";
+import { getErrorMessage } from "../helpers/errors";
 import {
   formatDate,
   formatPullRequestNumber,
@@ -8,15 +17,22 @@ import {
   getPullRequestUrl,
 } from "../helpers/format";
 import { CodeReview } from "../types";
-import { ErrorDetail } from "./ErrorDetail";
 
 export function CodeReviewDetail({ review }: { review: CodeReview }) {
-  const { codeReview, error, isLoading } = useCodeReview(review.id);
+  const { codeReview, error, isLoading, mutate } = useCodeReview(review.id);
   const detail = codeReview || review;
 
-  if (error) {
-    return <ErrorDetail error={error} />;
-  }
+  useEffect(() => {
+    if (!error) {
+      return;
+    }
+
+    void showToast({
+      style: Toast.Style.Failure,
+      title: "Could not load latest review details",
+      message: getErrorMessage(error),
+    });
+  }, [error]);
 
   const repository = formatRepository(detail.mergeRequest?.repository);
   const prNumber = detail.mergeRequest?.prNumber || detail.mergeRequest?.number;
@@ -63,6 +79,11 @@ export function CodeReviewDetail({ review }: { review: CodeReview }) {
               url={prUrl}
             />
           ) : null}
+          <Action
+            title="Refresh Details"
+            icon={Icon.ArrowClockwise}
+            onAction={() => void mutate()}
+          />
           <Action.CopyToClipboard title="Copy Review ID" content={detail.id} />
         </ActionPanel>
       }

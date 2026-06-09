@@ -1,4 +1,5 @@
 import { getGreptileApiKey } from "../preferences";
+import { logger } from "../helpers/logger";
 
 const GREPTILE_MCP_URL = "https://api.greptile.com/mcp";
 
@@ -31,7 +32,7 @@ export async function callGreptileTool<T>(
   const requestKey = JSON.stringify({ name, args });
 
   if (inFlightRequests.has(requestKey)) {
-    console.debug("Reusing Greptile API request", {
+    logger.debug("Reusing Greptile API request", {
       url: GREPTILE_MCP_URL,
       method: "POST",
       tool: name,
@@ -53,7 +54,7 @@ export async function callGreptileTool<T>(
     },
   };
 
-  console.debug("Calling Greptile API", {
+  logger.debug("Calling Greptile API", {
     url: GREPTILE_MCP_URL,
     method: "POST",
     jsonrpcMethod: requestBody.method,
@@ -101,7 +102,7 @@ async function executeGreptileTool<T>(
     | undefined;
   const bodyParsedAt = Date.now();
 
-  console.debug("Greptile API response", {
+  logger.debug("Greptile API response", {
     url: GREPTILE_MCP_URL,
     method: "POST",
     tool: name,
@@ -134,7 +135,7 @@ async function executeGreptileTool<T>(
   const result = unwrapToolResult<T>(payload.result);
   const resultParsedAt = Date.now();
 
-  console.debug("Greptile API completed", {
+  logger.debug("Greptile API completed", {
     url: GREPTILE_MCP_URL,
     method: "POST",
     tool: name,

@@ -74,10 +74,12 @@ export function PullRequestListItem({
               url={url}
             />
           ) : null}
-          <Action.CopyToClipboard
-            title="Copy Pull Request URL"
-            content={url || ""}
-          />
+          {url ? (
+            <Action.CopyToClipboard
+              title="Copy Pull Request URL"
+              content={url}
+            />
+          ) : null}
           <Action.CopyToClipboard
             title="Copy Pull Request Title"
             content={pullRequest.title}

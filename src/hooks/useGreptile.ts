@@ -1,3 +1,4 @@
+import { Toast, showToast } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -13,6 +14,7 @@ import {
   SearchCommentsInput,
 } from "../api/greptile";
 import { PAGE_SIZE } from "../constants";
+import { getErrorMessage } from "../helpers/errors";
 
 export function usePullRequests(input: ListPullRequestsInput) {
   const { items, ...state } = usePaginatedResults(
@@ -97,7 +99,7 @@ function usePaginatedResults<
   execute = true,
 ) {
   const [items, setItems] = useState<T[]>([]);
-  const [error, setError] = useState<unknown>();
+  const [initialError, setInitialError] = useState<unknown>();
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
@@ -115,12 +117,12 @@ function usePaginatedResults<
       const limit = input.limit ?? PAGE_SIZE;
       const requestId = ++requestIdRef.current;
       isLoadingRef.current = true;
-      setError(undefined);
 
       if (mode === "replace") {
         itemsRef.current = [];
         hasMoreRef.current = false;
         setItems([]);
+        setInitialError(undefined);
         setHasMore(false);
         setIsLoading(true);
       } else {
@@ -156,7 +158,15 @@ function usePaginatedResults<
         setHasMore(nextHasMore);
       } catch (error) {
         if (requestId === requestIdRef.current) {
-          setError(error);
+          if (mode === "replace") {
+            setInitialError(error);
+          } else {
+            void showToast({
+              style: Toast.Style.Failure,
+              title: "Could not load more results",
+              message: getErrorMessage(error),
+            });
+          }
         }
       } finally {
         if (requestId === requestIdRef.current) {
@@ -176,7 +186,7 @@ function usePaginatedResults<
       hasMoreRef.current = false;
       isLoadingRef.current = false;
       setItems([]);
-      setError(undefined);
+      setInitialError(undefined);
       setIsLoading(false);
       setIsLoadingMore(false);
       setHasMore(false);
@@ -196,9 +206,8 @@ function usePaginatedResults<
 
   return {
     items,
-    error,
+    error: initialError,
     isLoading: isLoading || isLoadingMore,
-    isLoadingInitial: isLoading,
     isLoadingMore,
     hasMore,
     loadMore,
