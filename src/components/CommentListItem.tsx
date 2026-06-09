@@ -55,10 +55,7 @@ export function CommentListItem({ comment }: { comment: GreptileComment }) {
               url={commentUrl}
             />
           ) : null}
-          <Action.CopyToClipboard
-            title="Copy Comment Body"
-            content={comment.body}
-          />
+          <Action.CopyToClipboard content={comment.body} />
         </ActionPanel>
       }
     />

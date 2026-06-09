@@ -131,9 +131,21 @@ export function getCommentUrl(comment: GreptileComment) {
     return undefined;
   }
 
-  return comment.commentId
-    ? `${url}#discussion_r${comment.commentId.replace(/\D/g, "")}`
-    : url;
+  if (!comment.commentId || url.includes("#")) {
+    return url;
+  }
+
+  const commentDigits = comment.commentId.replace(/\D/g, "");
+  const isGithubComment =
+    comment.mergeRequest?.repository?.remote === "github" ||
+    /github\./i.test(url) ||
+    /github\.com/i.test(url);
+
+  if (!commentDigits || !isGithubComment || url.includes("/merge_requests/")) {
+    return url;
+  }
+
+  return `${url}#discussion_r${commentDigits}`;
 }
 
 export function truncate(value: string, length = 120) {

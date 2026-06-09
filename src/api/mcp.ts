@@ -2,6 +2,7 @@ import { getGreptileApiKey } from "../preferences";
 import { logger } from "../helpers/logger";
 
 const GREPTILE_MCP_URL = "https://api.greptile.com/mcp";
+const GREPTILE_REQUEST_TIMEOUT_MS = 45_000;
 
 type JsonRpcResponse = {
   jsonrpc: "2.0";
@@ -87,14 +88,35 @@ async function executeGreptileTool<T>(
   startedAt: number,
   requestBody: Record<string, unknown>,
 ) {
-  const response = await fetch(GREPTILE_MCP_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${getGreptileApiKey()}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(requestBody),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    GREPTILE_REQUEST_TIMEOUT_MS,
+  );
+  let response: Response;
+
+  try {
+    response = await fetch(GREPTILE_MCP_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${getGreptileApiKey()}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(requestBody),
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw new Error(
+        `Greptile request timed out after ${GREPTILE_REQUEST_TIMEOUT_MS / 1000} seconds.`,
+      );
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+
   const responseReceivedAt = Date.now();
 
   const payload = (await response.json().catch(() => undefined)) as
@@ -151,6 +173,10 @@ async function executeGreptileTool<T>(
   });
 
   return result;
+}
+
+function isAbortError(error: unknown) {
+  return error instanceof Error && error.name === "AbortError";
 }
 
 function unwrapToolResult<T>(result: unknown): T {

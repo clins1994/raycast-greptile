@@ -10,6 +10,9 @@ import {
   SearchCommentsResponse,
 } from "../types";
 
+const MAX_LIST_LIMIT = 100;
+const MAX_COMMENT_SEARCH_LIMIT = 50;
+
 type RepositoryInput = RepositoryFilter & PaginationInput;
 
 export type ListPullRequestsInput = RepositoryInput & {
@@ -47,12 +50,10 @@ export async function getCodeReview(codeReviewId: string) {
 }
 
 export async function searchComments(input: SearchCommentsInput) {
-  return callGreptileTool<SearchCommentsResponse>("search_greptile_comments", {
-    query: input.query,
-    includeAddressed: input.includeAddressed,
-    limit: input.limit,
-    offset: input.offset,
-  });
+  return callGreptileTool<SearchCommentsResponse>(
+    "search_greptile_comments",
+    normalizeSearchCommentsArguments(input),
+  );
 }
 
 function normalizeListArguments<T extends RepositoryInput>(input: T) {
@@ -122,10 +123,42 @@ function normalizeArgumentValue(key: string, value: unknown) {
       return undefined;
     }
 
+    if (key === "limit" && value > MAX_LIST_LIMIT) {
+      return MAX_LIST_LIMIT;
+    }
+
     if (key === "offset" && value < 0) {
       return undefined;
     }
   }
 
   return value;
+}
+
+function normalizeSearchCommentsArguments(input: SearchCommentsInput) {
+  return {
+    query: input.query,
+    includeAddressed: input.includeAddressed,
+    limit: normalizeCommentSearchPaginationValue("limit", input.limit),
+    offset: normalizeCommentSearchPaginationValue("offset", input.offset),
+  };
+}
+
+function normalizeCommentSearchPaginationValue(
+  key: "limit" | "offset",
+  value?: number,
+) {
+  if (typeof value !== "number") {
+    return undefined;
+  }
+
+  if (key === "limit") {
+    if (value <= 0) {
+      return undefined;
+    }
+
+    return Math.min(value, MAX_COMMENT_SEARCH_LIMIT);
+  }
+
+  return value < 0 ? undefined : value;
 }
